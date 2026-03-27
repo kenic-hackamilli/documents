@@ -155,6 +155,15 @@ test("GET /documents redirects to the base-path FAQ route when BASE_PATH is set"
   assert.equal(response.headers.get("location"), "/documents/faq");
 });
 
+test("GET /documents/faq infers the /documents base path from the request URL", async () => {
+  const response = await request("/documents/faq");
+
+  assert.equal(response.status, 200);
+  assert.match(response.body, /href="\/documents\/assets\/theme\.css"/i);
+  assert.match(response.body, /src="\/documents\/assets\/app\.js"/i);
+  assert.match(response.body, /data-base-path="\/documents"/i);
+});
+
 test("GET /documents/faq renders asset and API links with the configured base path", async () => {
   const response = await request("/documents/faq", "GET", { basePath: "/documents" });
 

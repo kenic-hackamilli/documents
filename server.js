@@ -8,7 +8,7 @@ const ROOT_DIR = __dirname;
 const CONTENT_DIR = path.join(ROOT_DIR, "content");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const DEFAULT_PORT = Number.parseInt(process.env.PORT || "4300", 10);
-const BASE_PATH = normalizeBasePath(process.env.BASE_PATH);
+const DEFAULT_BASE_PATH = normalizeBasePath(process.env.BASE_PATH);
 
 const STATIC_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -72,7 +72,7 @@ function normalizeBasePath(value) {
   return withLeadingSlash.replace(/\/+$/, "");
 }
 
-const withBasePath = (pathname = "/") => {
+const withBasePath = (basePath, pathname = "/") => {
   const normalizedPath =
     !pathname || pathname === "/"
       ? "/"
@@ -80,32 +80,79 @@ const withBasePath = (pathname = "/") => {
         ? pathname
         : `/${pathname}`;
 
-  if (!BASE_PATH) {
+  if (!basePath) {
     return normalizedPath;
   }
 
   if (normalizedPath === "/") {
-    return `${BASE_PATH}/`;
+    return `${basePath}/`;
   }
 
-  return `${BASE_PATH}${normalizedPath}`;
+  return `${basePath}${normalizedPath}`;
 };
 
-const stripBasePath = (pathname) => {
-  if (!BASE_PATH) {
+const stripBasePath = (pathname, basePath) => {
+  if (!basePath) {
     return pathname;
   }
 
-  if (pathname === BASE_PATH) {
+  if (pathname === basePath) {
     return "/";
   }
 
-  if (pathname.startsWith(`${BASE_PATH}/`)) {
-    return pathname.slice(BASE_PATH.length) || "/";
+  if (pathname.startsWith(`${basePath}/`)) {
+    return pathname.slice(basePath.length) || "/";
   }
 
   return pathname;
 };
+
+const readHeaderValue = (value) =>
+  Array.isArray(value) ? value[0] : value;
+
+const isKnownDocumentPath = (pathname) =>
+  pathname === "/" ||
+  pathname === "/faq" ||
+  pathname === "/privacy-policy" ||
+  pathname === "/privacy" ||
+  pathname === "/t&c" ||
+  pathname === "/t%26c" ||
+  pathname === "/terms-and-conditions" ||
+  pathname === "/terms" ||
+  pathname === "/api" ||
+  pathname === "/assets" ||
+  pathname === "/favicon.svg" ||
+  pathname === "/assets/theme.css" ||
+  pathname.startsWith("/assets/") ||
+  pathname === "/api/health" ||
+  pathname === "/api/faqs" ||
+  pathname === "/api/privacy-policy" ||
+  pathname === "/api/terms-and-conditions";
+
+const inferBasePath = (pathname) => {
+  const match = pathname.match(/^\/([^/]+)(\/.*)?$/);
+  if (!match) {
+    return "";
+  }
+
+  const inferredBasePath = `/${match[1]}`;
+  const remainder = match[2] || "";
+
+  if (isKnownDocumentPath(inferredBasePath)) {
+    return "";
+  }
+
+  if (!remainder) {
+    return inferredBasePath;
+  }
+
+  return isKnownDocumentPath(remainder) ? inferredBasePath : "";
+};
+
+const resolveBasePath = (req, normalizedPathname) =>
+  normalizeBasePath(readHeaderValue(req.headers?.["x-forwarded-prefix"])) ||
+  DEFAULT_BASE_PATH ||
+  inferBasePath(normalizedPathname);
 
 const readContent = (filename) => {
   const filePath = path.join(CONTENT_DIR, filename);
@@ -206,19 +253,26 @@ const filterFaqs = (items, rawQuery, rawTopic) => {
   };
 };
 
-const renderShell = ({ title, description, routeTag, body, footerNote }) => `<!doctype html>
+const renderShell = ({
+  title,
+  description,
+  routeTag,
+  body,
+  footerNote,
+  basePath
+}) => `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="${escapeHtml(description)}" />
     <title>${escapeHtml(title)}</title>
-    <link rel="icon" href="${escapeHtml(withBasePath("/favicon.svg"))}" type="image/svg+xml" />
-    <link rel="stylesheet" href="${escapeHtml(withBasePath("/assets/theme.css"))}" />
-    <link rel="stylesheet" href="${escapeHtml(withBasePath("/assets/styles.css"))}" />
-    <script type="module" src="${escapeHtml(withBasePath("/assets/app.js"))}"></script>
+    <link rel="icon" href="${escapeHtml(withBasePath(basePath, "/favicon.svg"))}" type="image/svg+xml" />
+    <link rel="stylesheet" href="${escapeHtml(withBasePath(basePath, "/assets/theme.css"))}" />
+    <link rel="stylesheet" href="${escapeHtml(withBasePath(basePath, "/assets/styles.css"))}" />
+    <script type="module" src="${escapeHtml(withBasePath(basePath, "/assets/app.js"))}"></script>
   </head>
-  <body data-base-path="${escapeHtml(BASE_PATH)}">
+  <body data-base-path="${escapeHtml(basePath)}">
     <div class="site-shell">
       <header class="site-header">
         <div class="container header-row">
@@ -304,7 +358,7 @@ const buildFaqSummary = (filtered, activeTopicLabel) => {
   return `Showing ${fragments.join(" ")}.`;
 };
 
-const renderFaqPage = (requestUrl) => {
+const renderFaqPage = (requestUrl, basePath) => {
   const document = getFaqDocument();
   const filtered = filterFaqs(
     document.items,
@@ -359,6 +413,7 @@ const renderFaqPage = (requestUrl) => {
     title: "FAQ | DotKE Documents",
     description: "Helpful answers about .KE domains, DNS, privacy, and account safety.",
     routeTag: "FAQ",
+    basePath,
     body: `
       <section class="hero-grid hero-grid-single">
         <article class="hero-card hero-card-main">
@@ -440,11 +495,12 @@ const renderPolicySection = (section) => {
   `;
 };
 
-const renderLegalPage = ({ document, title, description, routeTag }) =>
+const renderLegalPage = ({ document, title, description, routeTag, basePath }) =>
   renderShell({
     title,
     description,
     routeTag,
+    basePath,
     body: `
       <section class="hero-grid">
         <article class="hero-card hero-card-main">
@@ -488,34 +544,37 @@ const renderLegalPage = ({ document, title, description, routeTag }) =>
     `
   });
 
-const renderPrivacyPage = () =>
+const renderPrivacyPage = (basePath) =>
   renderLegalPage({
     document: getPrivacyDocument(),
     title: "Privacy Policy | DotKE Documents",
     description: "Privacy information about how DotKE collects, uses, stores, and protects personal data.",
-    routeTag: "Privacy Policy"
+    routeTag: "Privacy Policy",
+    basePath
   });
 
-const renderTermsPage = () =>
+const renderTermsPage = (basePath) =>
   renderLegalPage({
     document: getTermsDocument(),
     title: "Terms & Conditions | DotKE Documents",
     description: "Terms and conditions for using DotKE services, accounts, and domain-related workflows.",
-    routeTag: "T&C"
+    routeTag: "T&C",
+    basePath
   });
 
-const renderNotFoundPage = () =>
+const renderNotFoundPage = (basePath) =>
   renderShell({
     title: "Not Found | DotKE Documents",
     description: "The requested document route was not found.",
     routeTag: "404",
+    basePath,
     body: `
       <section class="single-panel">
         <article class="empty-card">
           <p class="eyebrow">404</p>
           <h1>That document route does not exist.</h1>
           <p>Try the FAQ, Privacy Policy, or T&amp;C route instead.</p>
-          <a class="button button-primary" href="${escapeHtml(withBasePath("/faq"))}">Go to FAQ</a>
+          <a class="button button-primary" href="${escapeHtml(withBasePath(basePath, "/faq"))}">Go to FAQ</a>
         </article>
       </section>
     `
@@ -642,7 +701,8 @@ const createRequestHandler = () => (req, res) => {
       return;
     }
 
-    const pathname = stripBasePath(normalizedPathname);
+    const basePath = resolveBasePath(req, normalizedPathname);
+    const pathname = stripBasePath(normalizedPathname, basePath);
 
     if (pathname === "/assets/theme.css") {
       send(
@@ -704,7 +764,7 @@ const createRequestHandler = () => (req, res) => {
 
     if (pathname === "/") {
       res.statusCode = 308;
-      res.setHeader("Location", withBasePath("/faq"));
+      res.setHeader("Location", withBasePath(basePath, "/faq"));
       res.end();
       return;
     }
@@ -714,7 +774,7 @@ const createRequestHandler = () => (req, res) => {
         res,
         method,
         200,
-        renderFaqPage(requestUrl),
+        renderFaqPage(requestUrl, basePath),
         "text/html; charset=utf-8",
         "no-store"
       );
@@ -726,7 +786,7 @@ const createRequestHandler = () => (req, res) => {
         res,
         method,
         200,
-        renderPrivacyPage(),
+        renderPrivacyPage(basePath),
         "text/html; charset=utf-8",
         "no-store"
       );
@@ -743,14 +803,21 @@ const createRequestHandler = () => (req, res) => {
         res,
         method,
         200,
-        renderTermsPage(),
+        renderTermsPage(basePath),
         "text/html; charset=utf-8",
         "no-store"
       );
       return;
     }
 
-    send(res, method, 404, renderNotFoundPage(), "text/html; charset=utf-8", "no-store");
+    send(
+      res,
+      method,
+      404,
+      renderNotFoundPage(basePath),
+      "text/html; charset=utf-8",
+      "no-store"
+    );
   };
 
 const createServer = () => http.createServer(createRequestHandler());
