@@ -1,0 +1,124 @@
+{
+  "title": "Privacy Policy",
+  "summary": "This Privacy Policy explains what information we collect, how we use it, when we share it, and the choices available to you when you use DotKE services.",
+  "version": "1.0.0",
+  "owner": "DotKE",
+  "highlights": [
+    "Explains what information we collect and why we need it.",
+    "Describes how we protect, store, and share personal information.",
+    "Outlines the privacy choices available when using DotKE services."
+  ],
+  "sections": [
+    {
+      "id": "scope",
+      "title": "Scope",
+      "body": [
+        "This Privacy Policy explains how DotKE collects, uses, stores, and shares personal information when people use the app, website, support channels, and related domain-management services.",
+        "By using our services, you acknowledge that your information may be processed as described in this policy."
+      ],
+      "bullets": [
+        "Applies to customer, prospect, and support interactions.",
+        "Covers web, mobile, and operational support workflows."
+      ]
+    },
+    {
+      "id": "information-we-collect",
+      "title": "Information We Collect",
+      "body": [
+        "We may collect account details, profile information, contact information, payment references, device identifiers, support messages, and event logs needed to secure and operate the service.",
+        "We also collect technical diagnostics that help us detect abuse, investigate failures, and improve product reliability."
+      ],
+      "bullets": [
+        "Identity and contact details such as name, email, and phone number.",
+        "Domain and transaction records such as search history, orders, and status changes.",
+        "Security and device telemetry such as IP address, device type, and authentication events."
+      ]
+    },
+    {
+      "id": "how-we-use-information",
+      "title": "How We Use Information",
+      "body": [
+        "We use personal information to provide the service, complete transactions, secure accounts, communicate with users, meet legal obligations, and improve system performance.",
+        "Where the law requires it, we rely on consent or another valid legal basis for processing."
+      ],
+      "bullets": [
+        "To provision and manage products and services.",
+        "To prevent fraud, account takeover, abuse, and other harmful activity.",
+        "To provide support, notices, and service updates."
+      ]
+    },
+    {
+      "id": "sharing-and-processors",
+      "title": "Sharing and Service Providers",
+      "body": [
+        "We may share information with registrars, payment processors, infrastructure providers, analytics providers, regulators, or professional advisers when required to operate the service or comply with law.",
+        "When providers act on our behalf, we expect them to process information only for the services they support and to apply appropriate security controls."
+      ],
+      "bullets": [
+        "We do not share personal data casually or without purpose.",
+        "We expect vendors to use appropriate confidentiality and security safeguards."
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Security",
+      "body": [
+        "We use administrative, technical, and physical safeguards designed to protect data against unauthorized access, disclosure, alteration, and destruction.",
+        "No system is perfectly secure, so our controls include monitoring, access management, audit logging, and incident response practices."
+      ],
+      "bullets": [
+        "Encryption in transit where appropriate.",
+        "Role-based access and privileged action controls.",
+        "Operational monitoring and forensic logging for high-risk events."
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "Data Retention",
+      "body": [
+        "We retain information for as long as necessary to provide the service, meet legal or regulatory obligations, resolve disputes, enforce agreements, and protect the integrity of our systems.",
+        "Retention periods should reflect the type of record, the business purpose, and the applicable legal requirements."
+      ],
+      "bullets": [
+        "Operational logs may be retained longer for security review and audit.",
+        "Records no longer needed should be deleted or anonymized where practical."
+      ]
+    },
+    {
+      "id": "your-rights",
+      "title": "Your Rights and Choices",
+      "body": [
+        "Depending on applicable law, users may have rights to access, correct, delete, restrict, or object to certain processing of their personal information.",
+        "Before acting on a request, we may ask for reasonable verification to protect your information and prevent unauthorized access."
+      ],
+      "bullets": [
+        "Users may be able to request access, correction, deletion, or restriction depending on applicable law.",
+        "We may ask for additional verification before acting on a request."
+      ]
+    },
+    {
+      "id": "cross-border",
+      "title": "Cross-Border Processing",
+      "body": [
+        "Some service providers or infrastructure may operate outside the user's home jurisdiction. When that happens, we expect appropriate transfer safeguards and security controls to be in place.",
+        "When information is processed across borders, we use reasonable safeguards designed to protect personal information."
+      ],
+      "bullets": [
+        "Vendor review should include storage location and access boundaries.",
+        "High-risk processing requires stronger contractual and technical review."
+      ]
+    },
+    {
+      "id": "changes",
+      "title": "Changes to This Policy",
+      "body": [
+        "We may update this policy to reflect service changes, legal developments, or improved explanations. Material changes should include a clear notice where appropriate.",
+        "When changes are important, we may provide additional notice through the app, website, or support channels."
+      ],
+      "bullets": [
+        "Review changes through a controlled release process.",
+        "Publish policy updates through a controlled release process."
+      ]
+    }
+  ]
+}

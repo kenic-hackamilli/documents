@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="DotKE Documents">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f45d37" />
+      <stop offset="100%" stop-color="#165d43" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="32" fill="url(#bg)" />
+  <path
+    d="M35 34h34c13.807 0 25 11.193 25 25s-11.193 25-25 25H35z"
+    fill="#fff8ea"
+  />
+  <path
+    d="M50 50h18c8.837 0 16 7.163 16 16s-7.163 16-16 16H50z"
+    fill="#16211d"
+    opacity=".9"
+  />
+</svg>

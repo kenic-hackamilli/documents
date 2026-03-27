@@ -1,0 +1,133 @@
+{
+  "title": "Terms & Conditions",
+  "summary": "These Terms & Conditions govern access to and use of DotKE services, including the app, website, support channels, and domain-related workflows.",
+  "version": "1.0.0",
+  "owner": "DotKE",
+  "highlights": [
+    "Explains the rules for using DotKE services and customer accounts.",
+    "Sets expectations for orders, renewals, availability, and service operations.",
+    "Describes acceptable use, suspension rights, and key liability boundaries."
+  ],
+  "sections": [
+    {
+      "id": "acceptance",
+      "title": "Acceptance of Terms",
+      "body": [
+        "By accessing or using DotKE services, you agree to be bound by these Terms & Conditions and any policies that are incorporated by reference.",
+        "If you do not agree with these terms, you should not use the service."
+      ],
+      "bullets": [
+        "These terms apply to web, mobile, support, and domain-management interactions.",
+        "Additional service-specific rules may apply to some products or workflows."
+      ]
+    },
+    {
+      "id": "accounts-and-eligibility",
+      "title": "Accounts and Eligibility",
+      "body": [
+        "You are responsible for providing accurate information when creating or managing an account and for keeping your credentials secure.",
+        "You must not impersonate another person, use false identity details, or give access to unauthorized users."
+      ],
+      "bullets": [
+        "Keep login credentials confidential and updated.",
+        "Promptly review and report unauthorized account activity."
+      ]
+    },
+    {
+      "id": "orders-and-service-delivery",
+      "title": "Orders and Service Delivery",
+      "body": [
+        "Submitting an order, registration request, transfer request, or renewal request does not guarantee completion until operational and policy requirements have been satisfied.",
+        "Availability, registrar processes, payment confirmation, and registry rules may affect whether a requested service can be completed."
+      ],
+      "bullets": [
+        "Domain availability can change between search and checkout.",
+        "Operational completion may depend on third-party registrars, infrastructure, or policy checks."
+      ]
+    },
+    {
+      "id": "fees-and-renewals",
+      "title": "Fees, Billing, and Renewals",
+      "body": [
+        "Applicable fees must be paid before services are activated or renewed unless another billing arrangement has been agreed in writing.",
+        "Failure to renew or maintain payment may result in suspension, expiry, or interruption of associated services."
+      ],
+      "bullets": [
+        "Customers should monitor expiry dates and renewal reminders.",
+        "Refund handling may depend on service status, provider rules, and applicable law."
+      ]
+    },
+    {
+      "id": "acceptable-use",
+      "title": "Acceptable Use",
+      "body": [
+        "You must not use DotKE services for unlawful activity, phishing, fraud, abuse, malware distribution, or other harmful conduct.",
+        "We may investigate misuse, preserve evidence where appropriate, and cooperate with lawful requests from regulators or enforcement bodies."
+      ],
+      "bullets": [
+        "Do not use the platform to harm networks, systems, or other users.",
+        "Abusive or deceptive conduct can lead to immediate restrictions."
+      ]
+    },
+    {
+      "id": "suspension-and-termination",
+      "title": "Suspension and Termination",
+      "body": [
+        "We may suspend, limit, or terminate access where reasonably necessary to protect users, enforce policy, respond to abuse, address security risk, or comply with legal obligations.",
+        "Where practical, we may provide notice before taking action, but urgent security or abuse situations may require immediate intervention."
+      ],
+      "bullets": [
+        "Protective actions may be temporary or permanent depending on risk and severity.",
+        "Operational holds may remain in place until verification or remediation is complete."
+      ]
+    },
+    {
+      "id": "intellectual-property",
+      "title": "Intellectual Property",
+      "body": [
+        "The service, interface, branding, documentation, and related materials remain the property of DotKE or its licensors unless stated otherwise.",
+        "These terms do not transfer ownership of our intellectual property to users."
+      ],
+      "bullets": [
+        "Do not copy, resell, or misuse protected materials without permission.",
+        "Customer content remains subject to the rights needed to operate the service."
+      ]
+    },
+    {
+      "id": "disclaimers-and-liability",
+      "title": "Disclaimers and Liability",
+      "body": [
+        "DotKE services are provided on a commercially reasonable basis, but uninterrupted availability, absolute accuracy, and complete freedom from defects cannot be guaranteed.",
+        "To the extent permitted by law, DotKE is not liable for indirect, incidental, consequential, or business interruption losses arising from use of the service."
+      ],
+      "bullets": [
+        "Customers remain responsible for their own business continuity and backup planning.",
+        "Some limitations may not apply where restricted by law."
+      ]
+    },
+    {
+      "id": "changes-to-services-or-terms",
+      "title": "Changes to Services or Terms",
+      "body": [
+        "We may update these terms, service features, workflows, or operational requirements to reflect product changes, legal developments, or security needs.",
+        "When changes are material, we may provide notice through the app, website, or other appropriate channels."
+      ],
+      "bullets": [
+        "Continued use after updates may mean you accept the revised terms.",
+        "Material changes should be released through a controlled review process."
+      ]
+    },
+    {
+      "id": "general",
+      "title": "General Terms",
+      "body": [
+        "If any part of these terms is found unenforceable, the remaining provisions continue to apply to the fullest extent permitted.",
+        "These terms work together with other applicable policies, including privacy and operational documentation."
+      ],
+      "bullets": [
+        "A waiver in one situation does not waive rights in another situation.",
+        "Operational and policy documents should be read alongside these terms."
+      ]
+    }
+  ]
+}

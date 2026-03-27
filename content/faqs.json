@@ -1,0 +1,145 @@
+{
+  "site": {
+    "name": "DotKE Documents",
+    "tagline": "Helpful answers for domains, DNS, privacy, and digital safety."
+  },
+  "hero": {
+    "eyebrow": "Support Knowledge Base",
+    "title": "Clear answers for domains, DNS, and online safety.",
+    "description": "Find practical help on .KE domains, DNS setup, privacy, security, and common account questions."
+  },
+  "items": [
+    {
+      "id": "what-is-kenic",
+      "question": "What is KeNIC and what role does it play in the .KE ecosystem?",
+      "answer": "KeNIC is the registry operator for the .KE namespace. It maintains registry infrastructure, accredits registrars, and defines the operational policies that keep .KE domains stable and trusted.",
+      "audience": "Registry basics",
+      "topics": ["KeNIC", "Registry"],
+      "details": [
+        "Registrars sell and manage registrations for end customers.",
+        "The registry remains the system of record for .KE domain data."
+      ]
+    },
+    {
+      "id": "how-registration-works",
+      "question": "How does .KE domain registration work?",
+      "answer": "You search for the domain name you want, confirm that it is available, complete payment through your chosen registrar or service, and then wait for the registration to be completed and linked to your account.",
+      "audience": "Registration flow",
+      "topics": ["KeNIC", "Registration"],
+      "details": [
+        "Make sure your contact details are correct before checkout.",
+        "Keep your payment confirmation until the domain appears in your account."
+      ]
+    },
+    {
+      "id": "domain-availability",
+      "question": "What makes a domain available or unavailable?",
+      "answer": "A domain is unavailable when it has already been registered, reserved by policy, or temporarily blocked. If a name is unavailable, try a close variation or a different extension that still fits your brand.",
+      "audience": "Search logic",
+      "topics": ["Registration", "Product"],
+      "details": [
+        "Short, memorable names are often taken first.",
+        "Adding a location, service, or brand keyword can help you find a strong alternative."
+      ]
+    },
+    {
+      "id": "what-is-dns",
+      "question": "What is DNS in simple terms?",
+      "answer": "DNS is the naming system that maps human-readable domains to the infrastructure that serves websites, mail, and other internet services. Without the right DNS records, a registered domain still will not resolve correctly for users.",
+      "audience": "Infrastructure basics",
+      "topics": ["DNS", "Infrastructure"],
+      "details": [
+        "Common record types include A, AAAA, CNAME, MX, TXT, and NS.",
+        "Operational success depends on both registration state and DNS state."
+      ]
+    },
+    {
+      "id": "dns-propagation",
+      "question": "Why does DNS propagation sometimes feel slow?",
+      "answer": "Resolvers across the internet respect record time-to-live values and refresh at different times. That means a DNS change can appear immediate in one network and delayed in another until cached answers expire.",
+      "audience": "Operations",
+      "topics": ["DNS", "Operations"],
+      "details": [
+        "Short TTLs help during migrations but increase query volume.",
+        "User messaging should explain that propagation is time-based, not random."
+      ]
+    },
+    {
+      "id": "dnssec",
+      "question": "Should we enable DNSSEC for sensitive domains?",
+      "answer": "If you can operate it correctly, yes. DNSSEC helps protect users from forged DNS answers by signing records cryptographically, which is especially important for government, finance, and identity-sensitive properties.",
+      "audience": "Security posture",
+      "topics": ["DNS", "Cybersecurity"],
+      "details": [
+        "DNSSEC improves trust but also adds key management responsibility.",
+        "Treat key rollover and monitoring as operational requirements, not optional tasks."
+      ]
+    },
+    {
+      "id": "account-protection",
+      "question": "How can I keep my domain account secure?",
+      "answer": "Use a strong password, enable multi-factor authentication if it is available, and review any unusual changes to contact details, nameservers, or transfer requests as soon as they appear.",
+      "audience": "Account security",
+      "topics": ["Cybersecurity", "Accounts"],
+      "details": [
+        "Avoid reusing the same password across different services.",
+        "Treat unexpected password reset or login alerts as a warning sign."
+      ]
+    },
+    {
+      "id": "abuse-reports",
+      "question": "What should I do if I suspect a domain is being used for phishing or abuse?",
+      "answer": "Report it through the support or abuse channel as quickly as possible and include the suspicious link, screenshots, and any messages you received. The more context you share, the easier it is to investigate the issue quickly.",
+      "audience": "Incident handling",
+      "topics": ["Cybersecurity", "Operations"],
+      "details": [
+        "Do not click unknown links or download suspicious files while investigating.",
+        "If the issue affects your own account, change your password immediately."
+      ]
+    },
+    {
+      "id": "privacy-policy-scope",
+      "question": "How can I ask about my personal data or privacy rights?",
+      "answer": "You can contact the privacy team using the details in the Privacy Policy if you want to ask about access, correction, deletion, or another privacy concern. Include enough information for the team to verify your request and respond accurately.",
+      "audience": "Compliance basics",
+      "topics": ["Privacy", "Compliance"],
+      "details": [
+        "A clear request helps the team respond faster.",
+        "Some requests may require identity verification before action is taken."
+      ]
+    },
+    {
+      "id": "site-not-loading",
+      "question": "Why is my website not loading even though I bought the domain?",
+      "answer": "Buying a domain is only one step. Your domain also needs correct DNS records, working hosting, and enough time for recent changes to spread across the internet before the site becomes visible everywhere.",
+      "audience": "Website setup",
+      "topics": ["DNS", "Support"],
+      "details": [
+        "Check that your nameservers or DNS records point to the right hosting provider.",
+        "If you made changes recently, give propagation some time before assuming something is broken."
+      ]
+    },
+    {
+      "id": "domain-transfer",
+      "question": "Can I transfer my .KE domain to another registrar?",
+      "answer": "Yes. A .KE domain can usually be transferred if it meets the transfer requirements and there are no outstanding restrictions on the domain. Start with your current registrar and confirm any codes or approval steps that may be required.",
+      "audience": "Domain transfer",
+      "topics": ["Registration", "Support"],
+      "details": [
+        "Confirm that the domain contact details are up to date before starting.",
+        "Transfers can take time if approval or verification is needed."
+      ]
+    },
+    {
+      "id": "domain-renewal",
+      "question": "What happens if I forget to renew my domain on time?",
+      "answer": "An expired domain may stop resolving, which can affect your website and email. Depending on the registrar and policy, there may be a grace period before the name becomes available to someone else.",
+      "audience": "Renewal",
+      "topics": ["Registration", "Accounts"],
+      "details": [
+        "Renew early if the domain is important to your business or brand.",
+        "Enable renewal reminders so the expiry date does not catch you by surprise."
+      ]
+    }
+  ]
+}
