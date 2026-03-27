@@ -8,6 +8,7 @@ const ROOT_DIR = __dirname;
 const CONTENT_DIR = path.join(ROOT_DIR, "content");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const DEFAULT_PORT = Number.parseInt(process.env.PORT || "4300", 10);
+const BASE_PATH = normalizeBasePath(process.env.BASE_PATH);
 
 const STATIC_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -58,6 +59,52 @@ const normalizePathname = (pathname) => {
   }
 
   return pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+};
+
+function normalizeBasePath(value) {
+  const trimmed = String(value || "").trim();
+
+  if (!trimmed || trimmed === "/") {
+    return "";
+  }
+
+  const withLeadingSlash = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return withLeadingSlash.replace(/\/+$/, "");
+}
+
+const withBasePath = (pathname = "/") => {
+  const normalizedPath =
+    !pathname || pathname === "/"
+      ? "/"
+      : pathname.startsWith("/")
+        ? pathname
+        : `/${pathname}`;
+
+  if (!BASE_PATH) {
+    return normalizedPath;
+  }
+
+  if (normalizedPath === "/") {
+    return `${BASE_PATH}/`;
+  }
+
+  return `${BASE_PATH}${normalizedPath}`;
+};
+
+const stripBasePath = (pathname) => {
+  if (!BASE_PATH) {
+    return pathname;
+  }
+
+  if (pathname === BASE_PATH) {
+    return "/";
+  }
+
+  if (pathname.startsWith(`${BASE_PATH}/`)) {
+    return pathname.slice(BASE_PATH.length) || "/";
+  }
+
+  return pathname;
 };
 
 const readContent = (filename) => {
@@ -166,12 +213,12 @@ const renderShell = ({ title, description, routeTag, body, footerNote }) => `<!d
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="${escapeHtml(description)}" />
     <title>${escapeHtml(title)}</title>
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/assets/theme.css" />
-    <link rel="stylesheet" href="/assets/styles.css" />
-    <script type="module" src="/assets/app.js"></script>
+    <link rel="icon" href="${escapeHtml(withBasePath("/favicon.svg"))}" type="image/svg+xml" />
+    <link rel="stylesheet" href="${escapeHtml(withBasePath("/assets/theme.css"))}" />
+    <link rel="stylesheet" href="${escapeHtml(withBasePath("/assets/styles.css"))}" />
+    <script type="module" src="${escapeHtml(withBasePath("/assets/app.js"))}"></script>
   </head>
-  <body>
+  <body data-base-path="${escapeHtml(BASE_PATH)}">
     <div class="site-shell">
       <header class="site-header">
         <div class="container header-row">
@@ -468,7 +515,7 @@ const renderNotFoundPage = () =>
           <p class="eyebrow">404</p>
           <h1>That document route does not exist.</h1>
           <p>Try the FAQ, Privacy Policy, or T&amp;C route instead.</p>
-          <a class="button button-primary" href="/faq">Go to FAQ</a>
+          <a class="button button-primary" href="${escapeHtml(withBasePath("/faq"))}">Go to FAQ</a>
         </article>
       </section>
     `
@@ -586,14 +633,16 @@ const createRequestHandler = () => (req, res) => {
     }
 
     const requestUrl = new URL(req.url || "/", "http://localhost");
-    const pathname = normalizePathname(requestUrl.pathname);
+    const normalizedPathname = normalizePathname(requestUrl.pathname);
 
-    if (requestUrl.pathname !== pathname) {
+    if (requestUrl.pathname !== normalizedPathname) {
       res.statusCode = 308;
-      res.setHeader("Location", `${pathname}${requestUrl.search}`);
+      res.setHeader("Location", `${normalizedPathname}${requestUrl.search}`);
       res.end();
       return;
     }
+
+    const pathname = stripBasePath(normalizedPathname);
 
     if (pathname === "/assets/theme.css") {
       send(
@@ -655,7 +704,7 @@ const createRequestHandler = () => (req, res) => {
 
     if (pathname === "/") {
       res.statusCode = 308;
-      res.setHeader("Location", "/faq");
+      res.setHeader("Location", withBasePath("/faq"));
       res.end();
       return;
     }

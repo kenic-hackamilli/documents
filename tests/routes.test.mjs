@@ -3,9 +3,22 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { createRequestHandler } = require("../server.js");
 
-const request = async (url, method = "GET") => {
+const loadCreateRequestHandler = (basePath = "") => {
+  if (basePath) {
+    process.env.BASE_PATH = basePath;
+  } else {
+    delete process.env.BASE_PATH;
+  }
+
+  const modulePath = require.resolve("../server.js");
+  delete require.cache[modulePath];
+
+  return require("../server.js").createRequestHandler;
+};
+
+const request = async (url, method = "GET", options = {}) => {
+  const createRequestHandler = loadCreateRequestHandler(options.basePath);
   const handler = createRequestHandler();
   const headers = new Map();
 
@@ -133,4 +146,20 @@ test("GET /assets/theme.css exposes the copied brand colors", async () => {
   assert.equal(response.status, 200);
   assert.match(response.body, /--color-primary:\s*#E30613/i);
   assert.match(response.body, /--color-secondary:\s*#009739/i);
+});
+
+test("GET /documents redirects to the base-path FAQ route when BASE_PATH is set", async () => {
+  const response = await request("/documents", "GET", { basePath: "/documents" });
+
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get("location"), "/documents/faq");
+});
+
+test("GET /documents/faq renders asset and API links with the configured base path", async () => {
+  const response = await request("/documents/faq", "GET", { basePath: "/documents" });
+
+  assert.equal(response.status, 200);
+  assert.match(response.body, /href="\/documents\/assets\/theme\.css"/i);
+  assert.match(response.body, /src="\/documents\/assets\/app\.js"/i);
+  assert.match(response.body, /data-base-path="\/documents"/i);
 });

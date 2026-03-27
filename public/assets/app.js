@@ -1,5 +1,23 @@
 let faqResizeBound = false;
 
+const normalizeBasePath = (value) => {
+  const trimmed = String(value || "").trim();
+
+  if (!trimmed || trimmed === "/") {
+    return "";
+  }
+
+  const withLeadingSlash = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return withLeadingSlash.replace(/\/+$/, "");
+};
+
+const buildAppPath = (pathname) => {
+  const basePath = normalizeBasePath(document.body?.dataset.basePath);
+  const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+
+  return basePath ? `${basePath}${normalizedPath}` : normalizedPath;
+};
+
 const escapeHtml = (value) =>
   String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -453,7 +471,7 @@ const initFaqFilters = async () => {
   });
 
   try {
-    const response = await window.fetch("/api/faqs", {
+    const response = await window.fetch(buildAppPath("/api/faqs"), {
       headers: {
         accept: "application/json",
       },

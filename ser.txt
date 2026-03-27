@@ -1,6 +1,11 @@
 # ----------------------------------------------------
 # Documents Backend (Node.js / PM2)
+# Set BASE_PATH=/documents in the documents service env
 # ----------------------------------------------------
+location = /documents {
+    return 301 /documents/;
+}
+
 location /documents/ {
     proxy_pass http://127.0.0.1:4300;
     proxy_http_version 1.1;

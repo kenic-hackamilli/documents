@@ -29,6 +29,7 @@ The server listens on:
 
 - `HOST`, defaulting to `0.0.0.0`
 - `PORT`, defaulting to `4300`
+- `BASE_PATH`, optional. Set this to `/documents` if you are mounting the service under `https://your-domain/documents`
 
 ## Routes
 
@@ -53,6 +54,7 @@ The server listens on:
 ## Hosting notes
 
 - Host the service behind your preferred reverse proxy or process manager
+- If you proxy it under a subpath such as `/documents`, set `BASE_PATH=/documents` in the service environment
 - Point the app directly to the route it needs instead of using a shared in-page menu
 - Use `/api/faqs`, `/api/privacy-policy`, and `/api/terms-and-conditions` if you later replace the current HTML frontend
 - Keep content changes and service deployments versioned independently from the mobile app
