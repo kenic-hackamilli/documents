@@ -55,6 +55,12 @@ test("GET /faq renders the FAQ page", async () => {
   assert.match(response.body, /data-faq-select-enhanced/i);
   assert.match(response.body, /id="faq-topic-menu"/i);
   assert.match(response.body, /All topics/i);
+  assert.doesNotMatch(response.body, /data-faq-search-input/i);
+  assert.doesNotMatch(response.body, /Search the knowledge base/i);
+  assert.doesNotMatch(response.body, /data-faq-native-select/i);
+  assert.doesNotMatch(response.body, /data-faq-submit/i);
+  assert.doesNotMatch(response.body, /data-faq-reset/i);
+  assert.doesNotMatch(response.body, /Reset filters/i);
   assert.doesNotMatch(response.body, /aria-label="Primary"/i);
   assert.doesNotMatch(response.body, /GET \/api\/faqs/i);
   assert.doesNotMatch(response.body, />\/faq</i);

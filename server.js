@@ -250,10 +250,6 @@ const buildFaqSummary = (filtered, activeTopicLabel) => {
     `${filtered.items.length} ${filtered.items.length === 1 ? "question" : "questions"}`
   ];
 
-  if (filtered.displayQuery) {
-    fragments.push(`matching "${filtered.displayQuery}"`);
-  }
-
   if (activeTopicLabel) {
     fragments.push(`in ${activeTopicLabel}`);
   }
@@ -265,7 +261,7 @@ const renderFaqPage = (requestUrl) => {
   const document = getFaqDocument();
   const filtered = filterFaqs(
     document.items,
-    requestUrl.searchParams.get("q"),
+    "",
     requestUrl.searchParams.get("topic")
   );
 
@@ -273,7 +269,6 @@ const renderFaqPage = (requestUrl) => {
   const activeTopicLabel =
     document.topics.find((topic) => topic.slug === activeTopic)?.name || "";
   const summary = buildFaqSummary(filtered, activeTopicLabel);
-  const hasActiveFilters = Boolean(filtered.query || activeTopic);
   const selectedTopicLabel = activeTopicLabel || "All topics";
   const topicOptions = [
     `<option value="">All topics</option>`,
@@ -309,8 +304,7 @@ const renderFaqPage = (requestUrl) => {
       <article class="empty-card">
         <p class="eyebrow">No match</p>
         <h2>Nothing matched that search yet.</h2>
-        <p>Try a broader topic like KeNIC, DNS, or Cybersecurity.</p>
-        <a class="button button-secondary" href="/faq" data-faq-inline-reset>Reset filters</a>
+        <p>Try a different topic or switch back to All topics.</p>
       </article>
     `;
 
@@ -328,40 +322,15 @@ const renderFaqPage = (requestUrl) => {
       </section>
 
       <section class="surface-card search-surface">
-        <form class="search-form" action="/faq" method="get" data-faq-filter-form>
+        <div class="search-form" data-faq-filter-form>
           <div class="filter-grid">
-            <div class="filter-field filter-field-search">
-              <label class="search-label" for="faq-search">Search the knowledge base</label>
-              <div class="search-control">
-                <span class="search-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                    <path d="M10.5 4a6.5 6.5 0 1 0 4.012 11.615l4.436 4.437 1.414-1.414-4.437-4.436A6.5 6.5 0 0 0 10.5 4Zm0 2a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z"></path>
-                  </svg>
-                </span>
-                <input
-                  id="faq-search"
-                  name="q"
-                  type="search"
-                  placeholder="Search domains, DNS, privacy, security..."
-                  value="${escapeHtml(filtered.displayQuery)}"
-                  data-faq-search-input
-                />
-              </div>
-            </div>
             <div class="filter-field">
-              <label class="search-label" id="faq-topic-label" for="faq-topic">Topic</label>
+              <span class="search-label" id="faq-topic-label">Topic</span>
               <div class="filter-select" data-faq-topic-filter>
-                <div class="select-control select-control-native" data-faq-native-select>
-                  <select id="faq-topic" name="topic" data-faq-topic-select>
-                    ${topicOptions}
-                  </select>
-                  <span class="select-icon" aria-hidden="true">
-                    <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
-                      <path d="M5.25 7.5 10 12.25 14.75 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-                    </svg>
-                  </span>
-                </div>
-                <div class="select-enhanced" data-faq-select-enhanced hidden>
+                <select id="faq-topic" name="topic" data-faq-topic-select hidden aria-hidden="true" tabindex="-1">
+                  ${topicOptions}
+                </select>
+                <div class="select-enhanced" data-faq-select-enhanced>
                   <button
                     type="button"
                     class="select-trigger"
@@ -393,21 +362,7 @@ const renderFaqPage = (requestUrl) => {
               </div>
             </div>
           </div>
-          <div class="filter-actions">
-            <button class="button button-primary" type="submit" data-faq-submit>Apply filters</button>
-            <a
-              class="button button-ghost"
-              href="/faq"
-              data-faq-reset
-              ${hasActiveFilters ? "" : "hidden"}
-            >
-              Reset
-            </a>
-            <span class="hint-copy" data-faq-hint ${hasActiveFilters ? "hidden" : ""}>
-              Try: domain transfer, DNS, renewal, security
-            </span>
-          </div>
-        </form>
+        </div>
         <div class="search-meta">
           <p class="result-copy" data-faq-summary aria-live="polite">${escapeHtml(summary)}</p>
         </div>

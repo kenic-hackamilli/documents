@@ -15,7 +15,7 @@ It is designed to be hosted as its own service and consumed by any client, inclu
 - Content lives in JSON files under `content/`
 - Theme tokens live in `config/theme.js`
 - The server exposes route pages and JSON APIs
-- FAQ search and topic filters work without needing a new app release
+- FAQ topic filtering works without needing a new app release
 - No external runtime dependencies are required
 
 ## Local run

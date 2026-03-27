@@ -1,5 +1,3 @@
-const FAQ_FILTER_DEBOUNCE_MS = 140;
-
 let faqResizeBound = false;
 
 const escapeHtml = (value) =>
@@ -17,12 +15,6 @@ const slugify = (value) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-const normalizeSearchValue = (value) =>
-  String(value || "")
-    .trim()
-    .replace(/\s+/g, " ")
-    .slice(0, 140);
-
 const matchesTopic = (item, topicSlug) => {
   if (!topicSlug) {
     return true;
@@ -31,25 +23,7 @@ const matchesTopic = (item, topicSlug) => {
   return (item.topics || []).some((topic) => slugify(topic) === topicSlug);
 };
 
-const matchesQuery = (item, query) => {
-  if (!query) {
-    return true;
-  }
-
-  const haystack = [
-    item.question,
-    item.answer,
-    ...(item.topics || []),
-    ...(item.details || []),
-    item.audience,
-  ]
-    .join(" ")
-    .toLowerCase();
-
-  return haystack.includes(query);
-};
-
-const buildFaqSummary = (items, displayQuery, activeTopicLabel) => {
+const buildFaqSummary = (items, activeTopicLabel) => {
   if (!items.length) {
     return "No questions matched the current filters.";
   }
@@ -57,10 +31,6 @@ const buildFaqSummary = (items, displayQuery, activeTopicLabel) => {
   const fragments = [
     `${items.length} ${items.length === 1 ? "question" : "questions"}`,
   ];
-
-  if (displayQuery) {
-    fragments.push(`matching "${displayQuery}"`);
-  }
 
   if (activeTopicLabel) {
     fragments.push(`in ${activeTopicLabel}`);
@@ -114,8 +84,7 @@ const renderFaqEmptyState = () => `
   <article class="empty-card">
     <p class="eyebrow">No match</p>
     <h2>Nothing matched that search yet.</h2>
-    <p>Try a broader topic like KeNIC, DNS, or Cybersecurity.</p>
-    <a class="button button-secondary" href="/faq" data-faq-inline-reset>Reset filters</a>
+    <p>Try a different topic or switch back to All topics.</p>
   </article>
 `;
 
@@ -235,17 +204,13 @@ const bindFaqAccordions = () => {
   }
 };
 
-const syncFaqUrl = ({ displayQuery, topic }) => {
+const syncFaqUrl = ({ topic }) => {
   if (!window.history?.replaceState) {
     return;
   }
 
   const nextUrl = new URL(window.location.href);
   nextUrl.search = "";
-
-  if (displayQuery) {
-    nextUrl.searchParams.set("q", displayQuery);
-  }
 
   if (topic) {
     nextUrl.searchParams.set("topic", topic);
@@ -255,7 +220,6 @@ const syncFaqUrl = ({ displayQuery, topic }) => {
 };
 
 const initCustomTopicSelect = ({
-  nativeWrapper,
   select,
   enhanced,
   trigger,
@@ -263,15 +227,13 @@ const initCustomTopicSelect = ({
   menu,
   onChange,
 }) => {
-  if (!nativeWrapper || !select || !enhanced || !trigger || !label || !menu) {
+  if (!select || !enhanced || !trigger || !label || !menu) {
     return {
       closeMenu() {},
       syncSelectedValue() {},
     };
   }
 
-  enhanced.hidden = false;
-  nativeWrapper.hidden = true;
   menu.hidden = false;
 
   const getOptions = () => Array.from(menu.querySelectorAll("[data-faq-option]"));
@@ -438,26 +400,19 @@ const initFaqFilters = async () => {
     return;
   }
 
-  const searchInput = form.querySelector("[data-faq-search-input]");
   const topicSelect = form.querySelector("[data-faq-topic-select]");
-  const nativeSelect = form.querySelector("[data-faq-native-select]");
   const enhancedSelect = form.querySelector("[data-faq-select-enhanced]");
   const selectTrigger = form.querySelector("[data-faq-select-trigger]");
   const selectLabel = form.querySelector("[data-faq-select-label]");
   const selectMenu = form.querySelector("[data-faq-select-menu]");
   const summary = document.querySelector("[data-faq-summary]");
   const faqList = document.querySelector("[data-faq-list]");
-  const resetLink = form.querySelector("[data-faq-reset]");
-  const submitButton = form.querySelector("[data-faq-submit]");
-  const hint = form.querySelector("[data-faq-hint]");
 
-  if (!searchInput || !topicSelect || !faqList || !summary) {
+  if (!topicSelect || !faqList || !summary) {
     return;
   }
 
   let allItems = null;
-  let liveFilteringEnabled = false;
-  let pendingRender = 0;
 
   const getSelectedTopicLabel = () => {
     const selectedOption = topicSelect.options[topicSelect.selectedIndex];
@@ -469,123 +424,32 @@ const initFaqFilters = async () => {
       return;
     }
 
-    const displayQuery = normalizeSearchValue(searchInput.value);
-    const query = displayQuery.toLowerCase();
     const topic = slugify(topicSelect.value);
-    const filteredItems = allItems.filter(
-      (item) => matchesQuery(item, query) && matchesTopic(item, topic)
-    );
+    const filteredItems = allItems.filter((item) => matchesTopic(item, topic));
     const activeTopicLabel = getSelectedTopicLabel();
-    const hasActiveFilters = Boolean(displayQuery || topic);
-
-    summary.textContent = buildFaqSummary(filteredItems, displayQuery, activeTopicLabel);
+    summary.textContent = buildFaqSummary(filteredItems, activeTopicLabel);
     faqList.innerHTML = filteredItems.length
       ? filteredItems.map(renderFaqCard).join("")
       : renderFaqEmptyState();
 
-    if (resetLink) {
-      resetLink.hidden = !hasActiveFilters;
-    }
-
-    if (hint) {
-      hint.hidden = hasActiveFilters;
-    }
-
-    syncFaqUrl({ displayQuery, topic });
+    syncFaqUrl({ topic });
     bindFaqAccordions();
   };
 
-  const scheduleRender = () => {
-    if (!liveFilteringEnabled) {
-      return;
-    }
-
-    window.clearTimeout(pendingRender);
-    pendingRender = window.setTimeout(() => {
-      renderCurrentState();
-    }, FAQ_FILTER_DEBOUNCE_MS);
-  };
-
   const customSelect = initCustomTopicSelect({
-    nativeWrapper: nativeSelect,
     select: topicSelect,
     enhanced: enhancedSelect,
     trigger: selectTrigger,
     label: selectLabel,
     menu: selectMenu,
     onChange: () => {
-      if (!liveFilteringEnabled) {
-        return;
-      }
-
-      window.clearTimeout(pendingRender);
       renderCurrentState();
     },
   });
 
-  if (hint) {
-    hint.textContent = "Type or pick a topic. Results update instantly.";
-  }
-
-  searchInput.addEventListener("input", () => {
-    scheduleRender();
-  });
-
-  searchInput.addEventListener("search", () => {
-    scheduleRender();
-  });
-
   topicSelect.addEventListener("change", () => {
     customSelect.syncSelectedValue(topicSelect.value);
-
-    if (!liveFilteringEnabled) {
-      return;
-    }
-
-    window.clearTimeout(pendingRender);
     renderCurrentState();
-  });
-
-  form.addEventListener("submit", (event) => {
-    if (!liveFilteringEnabled) {
-      return;
-    }
-
-    event.preventDefault();
-    window.clearTimeout(pendingRender);
-    renderCurrentState();
-  });
-
-  resetLink?.addEventListener("click", (event) => {
-    if (!liveFilteringEnabled) {
-      return;
-    }
-
-    event.preventDefault();
-    window.clearTimeout(pendingRender);
-    searchInput.value = "";
-    topicSelect.value = "";
-    customSelect.syncSelectedValue("");
-    customSelect.closeMenu();
-    renderCurrentState();
-    searchInput.focus();
-  });
-
-  faqList.addEventListener("click", (event) => {
-    const resetButton = event.target.closest("[data-faq-inline-reset]");
-
-    if (!resetButton || !liveFilteringEnabled) {
-      return;
-    }
-
-    event.preventDefault();
-    window.clearTimeout(pendingRender);
-    searchInput.value = "";
-    topicSelect.value = "";
-    customSelect.syncSelectedValue("");
-    customSelect.closeMenu();
-    renderCurrentState();
-    searchInput.focus();
   });
 
   try {
@@ -606,13 +470,6 @@ const initFaqFilters = async () => {
     }
 
     allItems = payload.items;
-    liveFilteringEnabled = true;
-    form.classList.add("is-live");
-
-    if (submitButton) {
-      submitButton.hidden = true;
-    }
-
     renderCurrentState();
   } catch (error) {
     window.console.error("Failed to enable live FAQ filtering", error);
