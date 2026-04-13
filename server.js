@@ -53,6 +53,14 @@ const escapeHtml = (value) =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
+const serializeInlineJson = (value) =>
+  JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+
 const normalizeCopy = (value) =>
   String(value ?? "")
     .trim()
@@ -536,6 +544,15 @@ const renderFaqPage = (requestUrl, basePath) => {
         <p>Try another category.</p>
       </article>
     `;
+  const faqPayload = {
+    items: document.items,
+    placeholders: document.placeholders,
+    meta: {
+      defaultTopic,
+      selectedTopic: activeTopic,
+      topics: document.topics
+    }
+  };
 
   return renderShell({
     title: "FAQ | DotKE Documents",
@@ -573,6 +590,7 @@ const renderFaqPage = (requestUrl, basePath) => {
       </section>
 
       <section class="faq-list" data-faq-list>${content}</section>
+      <script id="faq-data" type="application/json">${serializeInlineJson(faqPayload)}</script>
     `
   });
 };

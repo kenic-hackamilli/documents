@@ -160,6 +160,33 @@ const renderFaqResults = (items, placeholders) => {
   return parts.length ? parts.join("") : renderFaqEmptyState();
 };
 
+const readInlineFaqPayload = () => {
+  const payloadNode = document.getElementById("faq-data");
+
+  if (!payloadNode?.textContent) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(payloadNode.textContent);
+
+    if (!Array.isArray(payload?.items)) {
+      return null;
+    }
+
+    return {
+      items: payload.items,
+      placeholders: Array.isArray(payload.placeholders)
+        ? payload.placeholders
+        : [],
+      meta: payload.meta || {},
+    };
+  } catch (error) {
+    window.console.error("Failed to parse inline FAQ payload", error);
+    return null;
+  }
+};
+
 const updatePanelState = (button, panel, expanded, animate) => {
   button.setAttribute("aria-expanded", String(expanded));
 
@@ -484,7 +511,7 @@ const initFaqFilters = async () => {
 
   let allItems = null;
   let allPlaceholders = [];
-  const defaultTopic =
+  let defaultTopic =
     filter.dataset.defaultTopic ||
     getChipTopicValue(
       topicChips.find((chip) => getChipTopicValue(chip) === "customer-care") || {}
@@ -496,6 +523,19 @@ const initFaqFilters = async () => {
       topicChips.find((chip) => chip.classList.contains("is-selected")) || {}
     ) ||
     defaultTopic;
+  let renderedTopic = slugify(selectedTopic) || defaultTopic;
+
+  const applyFaqPayload = (payload) => {
+    allItems = payload.items;
+    allPlaceholders = payload.placeholders;
+    defaultTopic = slugify(payload.meta?.defaultTopic) || defaultTopic;
+  };
+
+  const syncInitialFaqState = (nextTopic) => {
+    syncSelectedTopic(nextTopic || defaultTopic);
+    renderedTopic = slugify(selectedTopic) || defaultTopic;
+    syncFaqUrl({ topic: renderedTopic, defaultTopic });
+  };
 
   const syncSelectedTopic = (nextTopic) => {
     selectedTopic = nextTopic || defaultTopic;
@@ -523,6 +563,12 @@ const initFaqFilters = async () => {
     }
 
     const topic = slugify(selectedTopic) || defaultTopic;
+
+    if (topic === renderedTopic) {
+      syncFaqUrl({ topic, defaultTopic });
+      return;
+    }
+
     const filteredItems = allItems.filter((item) => matchesTopic(item, topic));
     const visiblePlaceholders = getVisibleFaqPlaceholders(
       allPlaceholders,
@@ -535,6 +581,7 @@ const initFaqFilters = async () => {
       visiblePlaceholders
     );
     faqList.innerHTML = renderFaqResults(filteredItems, visiblePlaceholders);
+    renderedTopic = topic;
 
     syncFaqUrl({ topic, defaultTopic });
     bindFaqAccordions();
@@ -542,15 +589,26 @@ const initFaqFilters = async () => {
 
   topicChips.forEach((chip) => {
     chip.addEventListener("click", (event) => {
+      event.preventDefault();
+
       if (!allItems) {
         return;
       }
 
-      event.preventDefault();
       syncSelectedTopic(getChipTopicValue(chip));
       renderCurrentState();
     });
   });
+
+  const inlinePayload = readInlineFaqPayload();
+
+  if (inlinePayload) {
+    applyFaqPayload(inlinePayload);
+    syncInitialFaqState(
+      selectedTopic || inlinePayload.meta?.selectedTopic || defaultTopic
+    );
+    return;
+  }
 
   try {
     const response = await window.fetch(buildAppPath("/api/faqs"), {
@@ -569,12 +627,16 @@ const initFaqFilters = async () => {
       throw new Error("Invalid FAQ payload");
     }
 
-    allItems = payload.items;
-    allPlaceholders = Array.isArray(payload.placeholders)
-      ? payload.placeholders
-      : [];
-    syncSelectedTopic(selectedTopic || payload.meta?.defaultTopic || defaultTopic);
-    renderCurrentState();
+    applyFaqPayload({
+      items: payload.items,
+      placeholders: Array.isArray(payload.placeholders)
+        ? payload.placeholders
+        : [],
+      meta: payload.meta || {},
+    });
+    syncInitialFaqState(
+      selectedTopic || payload.meta?.selectedTopic || payload.meta?.defaultTopic || defaultTopic
+    );
   } catch (error) {
     window.console.error("Failed to enable live FAQ filtering", error);
   }

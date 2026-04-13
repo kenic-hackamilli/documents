@@ -60,6 +60,15 @@ const request = async (url, method = "GET", options = {}) => {
   });
 };
 
+const extractInlineFaqPayload = (body) => {
+  const match = body.match(
+    /<script id="faq-data" type="application\/json">([\s\S]+?)<\/script>/i
+  );
+
+  assert.ok(match, "expected inline FAQ payload");
+  return JSON.parse(match[1]);
+};
+
 test("GET / redirects to /faq", async () => {
   const response = await request("/");
 
@@ -71,6 +80,7 @@ test("GET / redirects to /faq", async () => {
 
 test("GET /faq renders the FAQ page", async () => {
   const response = await request("/faq");
+  const payload = extractInlineFaqPayload(response.body);
 
   assert.equal(response.status, 200);
   assert.match(response.body, />FAQs</i);
@@ -83,7 +93,10 @@ test("GET /faq renders the FAQ page", async () => {
   assert.match(response.body, /Showing 8 questions in Customer Care\./i);
   assert.match(response.body, />8<\/span>/i);
   assert.match(response.body, />9<\/span>/i);
-  assert.doesNotMatch(response.body, /Tech FAQ update in progress/i);
+  assert.doesNotMatch(
+    response.body,
+    /<h2 class="faq-banner-title">Tech FAQ update in progress<\/h2>/i
+  );
   assert.doesNotMatch(response.body, /<span class="topic-badge">Customer Care<\/span>/i);
   assert.doesNotMatch(response.body, />Live</i);
   assert.doesNotMatch(response.body, />Soon</i);
@@ -98,6 +111,10 @@ test("GET /faq renders the FAQ page", async () => {
   assert.doesNotMatch(response.body, /aria-label="Primary"/i);
   assert.doesNotMatch(response.body, /GET \/api\/faqs/i);
   assert.doesNotMatch(response.body, />\/faq</i);
+  assert.equal(payload.meta.defaultTopic, "customer-care");
+  assert.equal(payload.meta.selectedTopic, "customer-care");
+  assert.ok(Array.isArray(payload.items));
+  assert.ok(payload.items.length > 0);
 });
 
 test("GET /faq sets hardened response headers", async () => {
@@ -117,11 +134,13 @@ test("GET /faq sets hardened response headers", async () => {
 
 test("GET /faq with a placeholder topic renders the update banner", async () => {
   const response = await request("/faq?topic=tech");
+  const payload = extractInlineFaqPayload(response.body);
 
   assert.equal(response.status, 200);
   assert.match(response.body, /Tech FAQ update in progress/i);
   assert.match(response.body, /Tech content is being updated\./i);
   assert.doesNotMatch(response.body, /Showing 8 questions in Customer Care\./i);
+  assert.equal(payload.meta.selectedTopic, "tech");
 });
 
 test("GET /faq with the finance topic renders finance FAQs", async () => {
