@@ -181,6 +181,7 @@ svg {
 .footer-card,
 .surface-card,
 .hero-card,
+.faq-banner,
 .faq-card,
 .empty-card,
 .policy-section {
@@ -193,6 +194,7 @@ svg {
 .footer-card,
 .surface-card,
 .hero-card,
+.faq-banner,
 .empty-card,
 .policy-section {
   border-radius: var(--radius-xl);
@@ -381,6 +383,86 @@ svg {
   gap: 0.7rem;
 }
 
+.filter-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filter-heading .eyebrow {
+  margin-bottom: 0;
+}
+
+.topic-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.topic-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  min-height: 3rem;
+  min-width: min(220px, 100%);
+  padding: 0.75rem 0.9rem 0.75rem 0.95rem;
+  border: 1px solid rgba(52, 58, 64, 0.08);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--color-gray-700);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(26, 26, 26, 0.04);
+  transition:
+    transform var(--motion-fast),
+    border-color var(--motion-fast),
+    background-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    color var(--motion-fast);
+}
+
+.topic-chip:hover,
+.topic-chip:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(0, 123, 255, 0.14);
+  background: rgba(255, 255, 255, 0.98);
+  color: var(--color-text);
+  box-shadow: 0 10px 20px rgba(26, 26, 26, 0.06);
+}
+
+.topic-chip.is-selected {
+  border-color: rgba(227, 6, 19, 0.14);
+  background: linear-gradient(135deg, rgba(227, 6, 19, 0.1), rgba(0, 151, 57, 0.12));
+  color: var(--color-text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+}
+
+.topic-chip-title {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.topic-chip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.9rem;
+  min-height: 1.9rem;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(52, 58, 64, 0.1);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+
 .search-label {
   font-weight: 700;
 }
@@ -412,6 +494,27 @@ svg {
 .faq-card {
   border-radius: var(--radius-xl);
   padding: clamp(1rem, 3vw, 1.25rem);
+}
+
+.faq-banner {
+  background:
+    linear-gradient(135deg, rgba(227, 6, 19, 0.08), rgba(0, 151, 57, 0.1)),
+    var(--color-paper);
+}
+
+.faq-banner-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, 4vw, 1.8rem);
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.faq-banner-copy {
+  margin: 0.85rem 0 0;
+  color: var(--color-gray-700);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
 }
 
 .faq-trigger {
@@ -499,6 +602,13 @@ svg {
   margin: 0;
   line-height: 1.7;
   overflow-wrap: anywhere;
+}
+
+.faq-panel a,
+.faq-banner-copy a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
 }
 
 .detail-list {
@@ -850,6 +960,7 @@ svg {
   .footer-card,
   .surface-card,
   .hero-card,
+  .faq-banner,
   .faq-card,
   .empty-card,
   .policy-section {
@@ -907,6 +1018,27 @@ svg {
 
   .search-form {
     gap: 0.55rem;
+  }
+
+  .topic-chip-row {
+    gap: 0.5rem;
+  }
+
+  .topic-chip {
+    min-height: 2.8rem;
+    min-width: 100%;
+    padding: 0.68rem 0.82rem 0.68rem 0.9rem;
+    border-radius: 0.95rem;
+  }
+
+  .topic-chip-title {
+    font-size: 0.9rem;
+  }
+
+  .topic-chip-count {
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    font-size: 0.74rem;
   }
 
   .filter-grid {
@@ -968,6 +1100,7 @@ svg {
     gap: 0.75rem;
   }
 
+  .faq-banner,
   .faq-card {
     padding: 0.88rem 0.9rem;
   }

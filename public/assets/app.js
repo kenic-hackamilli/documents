@@ -26,6 +26,18 @@ const escapeHtml = (value) =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
+const formatInlineText = (value) =>
+  escapeHtml(value)
+    .replace(
+      /\b([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})\b/gi,
+      '<a href="mailto:$1">$1</a>'
+    )
+    .replace(
+      /\bhttps?:\/\/[^\s<]+/gi,
+      (url) =>
+        `<a href="${url}" target="_blank" rel="noreferrer noopener">${url}</a>`
+    );
+
 const slugify = (value) =>
   String(value || "")
     .trim()
@@ -41,9 +53,15 @@ const matchesTopic = (item, topicSlug) => {
   return (item.topics || []).some((topic) => slugify(topic) === topicSlug);
 };
 
-const buildFaqSummary = (items, activeTopicLabel) => {
-  if (!items.length) {
+const buildFaqSummary = (items, activeTopicLabel, placeholders = []) => {
+  if (!items.length && !placeholders.length) {
     return "No questions matched the current filters.";
+  }
+
+  if (!items.length && placeholders.length) {
+    return activeTopicLabel
+      ? `${activeTopicLabel} content is being updated.`
+      : `${placeholders.length} ${placeholders.length === 1 ? "section is" : "sections are"} being updated.`;
   }
 
   const fragments = [
@@ -54,19 +72,26 @@ const buildFaqSummary = (items, activeTopicLabel) => {
     fragments.push(`in ${activeTopicLabel}`);
   }
 
-  return `Showing ${fragments.join(" ")}.`;
+  const summary = [`Showing ${fragments.join(" ")}.`];
+
+  if (placeholders.length) {
+    summary.push(
+      `${placeholders.length} ${
+        placeholders.length === 1 ? "section is" : "sections are"
+      } being updated.`
+    );
+  }
+
+  return summary.join(" ");
 };
 
 const renderFaqCard = (item, index) => {
   const panelId = `faq-panel-${slugify(item.id || item.question || String(index + 1))}-${index + 1}`;
   const isOpen = index === 0;
   const details = Array.isArray(item.details) ? item.details : [];
-  const topicBadges = (item.topics || [])
-    .map((topic) => `<span class="topic-badge">${escapeHtml(topic)}</span>`)
-    .join("");
   const detailsList = details.length
     ? `<ul class="detail-list">${details
-        .map((detail) => `<li>${escapeHtml(detail)}</li>`)
+        .map((detail) => `<li>${formatInlineText(detail)}</li>`)
         .join("")}</ul>`
     : "";
 
@@ -90,21 +115,50 @@ const renderFaqCard = (item, index) => {
         class="faq-panel${isOpen ? " is-open" : ""}"
         ${isOpen ? "" : "hidden"}
       >
-        <p>${escapeHtml(item.answer)}</p>
+        <p>${formatInlineText(item.answer)}</p>
         ${detailsList}
-        <div class="topic-badges">${topicBadges}</div>
       </div>
     </article>
   `;
 };
 
+const renderFaqBanner = (placeholder) => `
+  <article class="faq-banner">
+    <p class="eyebrow">Update in progress</p>
+    <h2 class="faq-banner-title">${escapeHtml(placeholder.title || "")}</h2>
+    <p class="faq-banner-copy">${formatInlineText(placeholder.description || "")}</p>
+    <div class="topic-badges">
+      <span class="topic-badge">${escapeHtml(placeholder.name || "")}</span>
+    </div>
+  </article>
+`;
+
 const renderFaqEmptyState = () => `
   <article class="empty-card">
     <p class="eyebrow">No match</p>
     <h2>Nothing matched that search yet.</h2>
-    <p>Try a different topic or switch back to All topics.</p>
+    <p>Try another category.</p>
   </article>
 `;
+
+const getChipTopicValue = (chip) => chip?.dataset?.topicValue || "";
+
+const getVisibleFaqPlaceholders = (placeholders, topicSlug) => {
+  if (!topicSlug) {
+    return placeholders;
+  }
+
+  return placeholders.filter((placeholder) => placeholder.slug === topicSlug);
+};
+
+const renderFaqResults = (items, placeholders) => {
+  const parts = [
+    ...placeholders.map(renderFaqBanner),
+    ...items.map(renderFaqCard),
+  ];
+
+  return parts.length ? parts.join("") : renderFaqEmptyState();
+};
 
 const updatePanelState = (button, panel, expanded, animate) => {
   button.setAttribute("aria-expanded", String(expanded));
@@ -222,7 +276,7 @@ const bindFaqAccordions = () => {
   }
 };
 
-const syncFaqUrl = ({ topic }) => {
+const syncFaqUrl = ({ topic, defaultTopic }) => {
   if (!window.history?.replaceState) {
     return;
   }
@@ -230,7 +284,7 @@ const syncFaqUrl = ({ topic }) => {
   const nextUrl = new URL(window.location.href);
   nextUrl.search = "";
 
-  if (topic) {
+  if (topic && topic !== defaultTopic) {
     nextUrl.searchParams.set("topic", topic);
   }
 
@@ -412,62 +466,90 @@ const initCustomTopicSelect = ({
 };
 
 const initFaqFilters = async () => {
-  const form = document.querySelector("[data-faq-filter-form]");
+  const filter = document.querySelector("[data-faq-filter]");
 
-  if (!form) {
+  if (!filter) {
     return;
   }
 
-  const topicSelect = form.querySelector("[data-faq-topic-select]");
-  const enhancedSelect = form.querySelector("[data-faq-select-enhanced]");
-  const selectTrigger = form.querySelector("[data-faq-select-trigger]");
-  const selectLabel = form.querySelector("[data-faq-select-label]");
-  const selectMenu = form.querySelector("[data-faq-select-menu]");
+  const topicChips = Array.from(
+    filter.querySelectorAll("[data-faq-topic-chip]")
+  );
   const summary = document.querySelector("[data-faq-summary]");
   const faqList = document.querySelector("[data-faq-list]");
 
-  if (!topicSelect || !faqList || !summary) {
+  if (!topicChips.length || !faqList || !summary) {
     return;
   }
 
   let allItems = null;
+  let allPlaceholders = [];
+  const defaultTopic =
+    filter.dataset.defaultTopic ||
+    getChipTopicValue(
+      topicChips.find((chip) => getChipTopicValue(chip) === "customer-care") || {}
+    ) ||
+    getChipTopicValue(topicChips[0] || {}) ||
+    "";
+  let selectedTopic =
+    getChipTopicValue(
+      topicChips.find((chip) => chip.classList.contains("is-selected")) || {}
+    ) ||
+    defaultTopic;
 
-  const getSelectedTopicLabel = () => {
-    const selectedOption = topicSelect.options[topicSelect.selectedIndex];
-    return topicSelect.value ? selectedOption?.textContent?.trim() || "" : "";
+  const syncSelectedTopic = (nextTopic) => {
+    selectedTopic = nextTopic || defaultTopic;
+
+    topicChips.forEach((chip) => {
+      const isSelected = getChipTopicValue(chip) === selectedTopic;
+      chip.classList.toggle("is-selected", isSelected);
+      if (isSelected) {
+        chip.setAttribute("aria-current", "page");
+      } else {
+        chip.removeAttribute("aria-current");
+      }
+    });
   };
+
+  const getSelectedTopicLabel = () =>
+    topicChips
+      .find((chip) => getChipTopicValue(chip) === selectedTopic)
+      ?.querySelector(".topic-chip-title")
+      ?.textContent?.trim() || "";
 
   const renderCurrentState = () => {
     if (!allItems) {
       return;
     }
 
-    const topic = slugify(topicSelect.value);
+    const topic = slugify(selectedTopic) || defaultTopic;
     const filteredItems = allItems.filter((item) => matchesTopic(item, topic));
+    const visiblePlaceholders = getVisibleFaqPlaceholders(
+      allPlaceholders,
+      topic
+    );
     const activeTopicLabel = getSelectedTopicLabel();
-    summary.textContent = buildFaqSummary(filteredItems, activeTopicLabel);
-    faqList.innerHTML = filteredItems.length
-      ? filteredItems.map(renderFaqCard).join("")
-      : renderFaqEmptyState();
+    summary.textContent = buildFaqSummary(
+      filteredItems,
+      activeTopicLabel,
+      visiblePlaceholders
+    );
+    faqList.innerHTML = renderFaqResults(filteredItems, visiblePlaceholders);
 
-    syncFaqUrl({ topic });
+    syncFaqUrl({ topic, defaultTopic });
     bindFaqAccordions();
   };
 
-  const customSelect = initCustomTopicSelect({
-    select: topicSelect,
-    enhanced: enhancedSelect,
-    trigger: selectTrigger,
-    label: selectLabel,
-    menu: selectMenu,
-    onChange: () => {
-      renderCurrentState();
-    },
-  });
+  topicChips.forEach((chip) => {
+    chip.addEventListener("click", (event) => {
+      if (!allItems) {
+        return;
+      }
 
-  topicSelect.addEventListener("change", () => {
-    customSelect.syncSelectedValue(topicSelect.value);
-    renderCurrentState();
+      event.preventDefault();
+      syncSelectedTopic(getChipTopicValue(chip));
+      renderCurrentState();
+    });
   });
 
   try {
@@ -488,6 +570,10 @@ const initFaqFilters = async () => {
     }
 
     allItems = payload.items;
+    allPlaceholders = Array.isArray(payload.placeholders)
+      ? payload.placeholders
+      : [];
+    syncSelectedTopic(selectedTopic || payload.meta?.defaultTopic || defaultTopic);
     renderCurrentState();
   } catch (error) {
     window.console.error("Failed to enable live FAQ filtering", error);

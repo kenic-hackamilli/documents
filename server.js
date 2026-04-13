@@ -7,8 +7,10 @@ const theme = require("./config/theme.js");
 const ROOT_DIR = __dirname;
 const CONTENT_DIR = path.join(ROOT_DIR, "content");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
+const BASE_PATH_PATTERN = /^\/[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/;
 const DEFAULT_PORT = Number.parseInt(process.env.PORT || "4300", 10);
 const DEFAULT_BASE_PATH = normalizeBasePath(process.env.BASE_PATH);
+const MAX_URL_LENGTH = 2048;
 
 const STATIC_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -19,14 +21,18 @@ const STATIC_TYPES = {
 
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
-  "base-uri 'self'",
+  "base-uri 'none'",
   "object-src 'none'",
   "script-src 'self'",
   "style-src 'self'",
   "img-src 'self' data:",
   "font-src 'self'",
   "connect-src 'self'",
-  "form-action 'self'",
+  "form-action 'none'",
+  "frame-src 'none'",
+  "manifest-src 'self'",
+  "media-src 'none'",
+  "worker-src 'none'",
   "frame-ancestors 'self'"
 ].join("; ");
 
@@ -46,6 +52,23 @@ const escapeHtml = (value) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+
+const normalizeCopy = (value) =>
+  String(value ?? "")
+    .trim()
+    .replace(/\s+/g, " ");
+
+const formatInlineText = (value) =>
+  escapeHtml(value)
+    .replace(
+      /\b([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})\b/gi,
+      '<a href="mailto:$1">$1</a>'
+    )
+    .replace(
+      /\bhttps?:\/\/[^\s<]+/gi,
+      (url) =>
+        `<a href="${url}" target="_blank" rel="noreferrer noopener">${url}</a>`
+    );
 
 const normalizeText = (value) =>
   String(value || "")
@@ -68,9 +91,22 @@ function normalizeBasePath(value) {
     return "";
   }
 
+  if (/[\u0000-\u001f\u007f]/.test(trimmed)) {
+    return "";
+  }
+
   const withLeadingSlash = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  return withLeadingSlash.replace(/\/+$/, "");
+  const normalized = withLeadingSlash.replace(/\/+$/, "");
+  return BASE_PATH_PATTERN.test(normalized) ? normalized : "";
 }
+
+const isPathInside = (rootPath, targetPath) => {
+  const relativePath = path.relative(rootPath, targetPath);
+  return (
+    relativePath === "" ||
+    (!relativePath.startsWith("..") && !path.isAbsolute(relativePath))
+  );
+};
 
 const withBasePath = (basePath, pathname = "/") => {
   const normalizedPath =
@@ -171,7 +207,33 @@ const readContent = (filename) => {
 const getFaqDocument = () => {
   const data = readContent("faqs.json");
   const items = Array.isArray(data.items) ? data.items : [];
+  const placeholders = (Array.isArray(data.placeholders) ? data.placeholders : [])
+    .map((placeholder) => {
+      const name = normalizeCopy(placeholder?.name);
+      const slug = slugify(placeholder?.slug || name);
+
+      if (!name || !slug) {
+        return null;
+      }
+
+      return {
+        name,
+        slug,
+        title: normalizeCopy(placeholder?.title) || `${name} FAQ update in progress`,
+        description:
+          normalizeCopy(placeholder?.description) ||
+          "This section is currently being updated. Please check back soon."
+      };
+    })
+    .filter(Boolean);
   const topicsBySlug = new Map();
+
+  placeholders.forEach((placeholder) => {
+    topicsBySlug.set(placeholder.slug, {
+      slug: placeholder.slug,
+      name: placeholder.name
+    });
+  });
 
   items.forEach((item) => {
     const topics = Array.isArray(item.topics) ? item.topics : [];
@@ -192,6 +254,7 @@ const getFaqDocument = () => {
   return {
     ...data,
     items,
+    placeholders,
     topics: Array.from(topicsBySlug.values()).sort((left, right) =>
       left.name.localeCompare(right.name)
     )
@@ -253,6 +316,32 @@ const filterFaqs = (items, rawQuery, rawTopic) => {
   };
 };
 
+const getDefaultFaqTopicSlug = (document) => {
+  const availableTopics = Array.isArray(document?.topics) ? document.topics : [];
+
+  if (availableTopics.some((topic) => topic.slug === "customer-care")) {
+    return "customer-care";
+  }
+
+  return availableTopics[0]?.slug || "";
+};
+
+const buildFaqTopicHref = (basePath, topicSlug, defaultTopic) =>
+  withBasePath(
+    basePath,
+    topicSlug && topicSlug !== defaultTopic
+      ? `/faq?topic=${encodeURIComponent(topicSlug)}`
+      : "/faq"
+  );
+
+const filterFaqPlaceholders = (placeholders, topicSlug) => {
+  if (!topicSlug) {
+    return placeholders;
+  }
+
+  return placeholders.filter((placeholder) => placeholder.slug === topicSlug);
+};
+
 const renderShell = ({
   title,
   description,
@@ -305,12 +394,9 @@ const renderFaqCard = (item, index) => {
   const panelId = `faq-panel-${index + 1}`;
   const isOpen = index === 0;
   const details = Array.isArray(item.details) ? item.details : [];
-  const topicBadges = (item.topics || [])
-    .map((topic) => `<span class="topic-badge">${escapeHtml(topic)}</span>`)
-    .join("");
   const detailsList = details.length
     ? `<ul class="detail-list">${details
-        .map((detail) => `<li>${escapeHtml(detail)}</li>`)
+        .map((detail) => `<li>${formatInlineText(detail)}</li>`)
         .join("")}</ul>`
     : "";
 
@@ -334,17 +420,30 @@ const renderFaqCard = (item, index) => {
         class="faq-panel${isOpen ? " is-open" : ""}"
         ${isOpen ? "" : "hidden"}
       >
-        <p>${escapeHtml(item.answer)}</p>
+        <p>${formatInlineText(item.answer)}</p>
         ${detailsList}
-        <div class="topic-badges">${topicBadges}</div>
       </div>
     </article>
   `;
 };
 
-const buildFaqSummary = (filtered, activeTopicLabel) => {
-  if (!filtered.items.length) {
+const renderFaqBanner = (placeholder) => `
+  <article class="faq-banner">
+    <p class="eyebrow">Update in progress</p>
+    <h2 class="faq-banner-title">${escapeHtml(placeholder.title)}</h2>
+    <p class="faq-banner-copy">${formatInlineText(placeholder.description)}</p>
+  </article>
+`;
+
+const buildFaqSummary = (filtered, activeTopicLabel, visiblePlaceholders) => {
+  if (!filtered.items.length && !visiblePlaceholders.length) {
     return "No questions matched the current filters.";
+  }
+
+  if (!filtered.items.length && visiblePlaceholders.length) {
+    return activeTopicLabel
+      ? `${activeTopicLabel} content is being updated.`
+      : `${visiblePlaceholders.length} ${visiblePlaceholders.length === 1 ? "section is" : "sections are"} being updated.`;
   }
 
   const fragments = [
@@ -355,114 +454,117 @@ const buildFaqSummary = (filtered, activeTopicLabel) => {
     fragments.push(`in ${activeTopicLabel}`);
   }
 
-  return `Showing ${fragments.join(" ")}.`;
+  const summary = [`Showing ${fragments.join(" ")}.`];
+
+  if (visiblePlaceholders.length) {
+    summary.push(
+      `${visiblePlaceholders.length} ${
+        visiblePlaceholders.length === 1 ? "section is" : "sections are"
+      } being updated.`
+    );
+  }
+
+  return summary.join(" ");
 };
 
 const renderFaqPage = (requestUrl, basePath) => {
   const document = getFaqDocument();
+  const defaultTopic = getDefaultFaqTopicSlug(document);
+  const requestedTopic = slugify(requestUrl.searchParams.get("topic"));
+  const activeTopic = document.topics.some((topic) => topic.slug === requestedTopic)
+    ? requestedTopic
+    : defaultTopic;
   const filtered = filterFaqs(
     document.items,
     "",
-    requestUrl.searchParams.get("topic")
+    activeTopic
   );
-
-  const activeTopic = filtered.topic;
+  const visiblePlaceholders = filterFaqPlaceholders(
+    document.placeholders,
+    activeTopic
+  );
   const activeTopicLabel =
     document.topics.find((topic) => topic.slug === activeTopic)?.name || "";
-  const summary = buildFaqSummary(filtered, activeTopicLabel);
-  const selectedTopicLabel = activeTopicLabel || "All topics";
-  const topicOptions = [
-    `<option value="">All topics</option>`,
-    ...document.topics.map(
-      (topic) =>
-        `<option value="${escapeHtml(topic.slug)}"${
-          activeTopic === topic.slug ? " selected" : ""
-        }>${escapeHtml(topic.name)}</option>`
-    )
-  ].join("");
-  const topicOptionButtons = [
-    `<button type="button" class="select-option${
-      activeTopic ? "" : " is-selected"
-    }" role="option" aria-selected="${activeTopic ? "false" : "true"}" data-faq-option value="">All topics</button>`,
-    ...document.topics.map(
+  const summary = buildFaqSummary(
+    filtered,
+    activeTopicLabel,
+    visiblePlaceholders
+  );
+  const itemCountByTopic = new Map();
+  const placeholderTopics = new Set(
+    document.placeholders.map((placeholder) => placeholder.slug)
+  );
+
+  document.items.forEach((item) => {
+    (item.topics || []).forEach((topicName) => {
+      const slug = slugify(topicName);
+      itemCountByTopic.set(slug, (itemCountByTopic.get(slug) || 0) + 1);
+    });
+  });
+
+  const topicChips = document.topics
+    .map(
       (topic) => `
-        <button
-          type="button"
-          class="select-option${activeTopic === topic.slug ? " is-selected" : ""}"
-          role="option"
-          aria-selected="${activeTopic === topic.slug ? "true" : "false"}"
-          data-faq-option
-          value="${escapeHtml(topic.slug)}"
+        <a
+          href="${escapeHtml(
+            buildFaqTopicHref(basePath, topic.slug, defaultTopic)
+          )}"
+          class="topic-chip${activeTopic === topic.slug ? " is-selected" : ""}"
+          ${activeTopic === topic.slug ? 'aria-current="page"' : ""}
+          data-faq-topic-chip
+          data-topic-value="${escapeHtml(topic.slug)}"
         >
-          ${escapeHtml(topic.name)}
-        </button>
+          <span class="topic-chip-title">${escapeHtml(topic.name)}</span>
+          ${
+            placeholderTopics.has(topic.slug)
+              ? ""
+              : `<span class="topic-chip-count">${
+                  itemCountByTopic.get(topic.slug) || 0
+                }</span>`
+          }
+        </a>
       `
     )
-  ].join("");
-  const cards = filtered.items.length
-    ? filtered.items.map(renderFaqCard).join("")
+    .join("");
+  const cards = [...visiblePlaceholders.map(renderFaqBanner), ...filtered.items.map(renderFaqCard)].join("");
+  const content = cards
+    ? cards
     : `
       <article class="empty-card">
         <p class="eyebrow">No match</p>
         <h2>Nothing matched that search yet.</h2>
-        <p>Try a different topic or switch back to All topics.</p>
+        <p>Try another category.</p>
       </article>
     `;
 
   return renderShell({
     title: "FAQ | DotKE Documents",
-    description: "Helpful answers about .KE domains, DNS, privacy, and account safety.",
+    description: "Helpful answers about customer care, .KE domains, and support updates.",
     routeTag: "FAQ",
     basePath,
     body: `
       <section class="hero-grid hero-grid-single">
         <article class="hero-card hero-card-main">
-          <p class="eyebrow">${escapeHtml(document.hero.eyebrow)}</p>
           <h1 class="hero-title">${escapeHtml(document.hero.title)}</h1>
-          <p class="hero-copy">${escapeHtml(document.hero.description)}</p>
+          ${
+            document.hero.description
+              ? `<p class="hero-copy">${escapeHtml(document.hero.description)}</p>`
+              : ""
+          }
         </article>
       </section>
 
       <section class="surface-card search-surface">
-        <div class="search-form" data-faq-filter-form>
-          <div class="filter-grid">
-            <div class="filter-field">
-              <span class="search-label" id="faq-topic-label">Topic</span>
-              <div class="filter-select" data-faq-topic-filter>
-                <select id="faq-topic" name="topic" data-faq-topic-select hidden aria-hidden="true" tabindex="-1">
-                  ${topicOptions}
-                </select>
-                <div class="select-enhanced" data-faq-select-enhanced>
-                  <button
-                    type="button"
-                    class="select-trigger"
-                    aria-haspopup="listbox"
-                    aria-controls="faq-topic-menu"
-                    aria-expanded="false"
-                    aria-labelledby="faq-topic-label faq-topic-current"
-                    data-faq-select-trigger
-                  >
-                    <span class="select-trigger-copy" id="faq-topic-current" data-faq-select-label>
-                      ${escapeHtml(selectedTopicLabel)}
-                    </span>
-                    <span class="select-trigger-icon" aria-hidden="true">
-                      <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
-                        <path d="M5.25 7.5 10 12.25 14.75 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-                      </svg>
-                    </span>
-                  </button>
-                  <div
-                    class="select-menu"
-                    id="faq-topic-menu"
-                    role="listbox"
-                    data-faq-select-menu
-                    hidden
-                  >
-                    ${topicOptionButtons}
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div
+          class="search-form"
+          data-faq-filter
+          data-default-topic="${escapeHtml(defaultTopic)}"
+        >
+          <div class="filter-heading">
+            <p class="eyebrow">Browse by Category</p>
+          </div>
+          <div class="topic-chip-row" role="navigation" aria-label="FAQ categories">
+            ${topicChips}
           </div>
         </div>
         <div class="search-meta">
@@ -470,7 +572,7 @@ const renderFaqPage = (requestUrl, basePath) => {
         </div>
       </section>
 
-      <section class="faq-list" data-faq-list>${cards}</section>
+      <section class="faq-list" data-faq-list>${content}</section>
     `
   });
 };
@@ -615,21 +717,67 @@ const buildThemeCss = () => `:root {
   --font-display: ${theme.documents.fontDisplay};
 }`;
 
-const send = (res, method, statusCode, body, contentType, cacheControl) => {
-  const payload = Buffer.isBuffer(body) ? body : Buffer.from(body);
+const appendVaryHeader = (res, value) => {
+  const currentValue =
+    typeof res.getHeader === "function" ? res.getHeader("Vary") : "";
+  const currentParts = String(currentValue || "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const nextParts = String(value || "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const merged = Array.from(new Set([...currentParts, ...nextParts]));
 
-  res.statusCode = statusCode;
+  if (merged.length) {
+    res.setHeader("Vary", merged.join(", "));
+  }
+};
+
+const applyResponseHeaders = (res, contentType, cacheControl, extraHeaders = {}) => {
   res.setHeader("Content-Type", contentType);
-  res.setHeader("Content-Length", String(payload.length));
   res.setHeader("Cache-Control", cacheControl);
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("X-DNS-Prefetch-Control", "off");
+  res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+  res.setHeader("Origin-Agent-Cluster", "?1");
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  res.setHeader("Accept-Ranges", "none");
+  appendVaryHeader(res, "X-Forwarded-Prefix");
 
   if (contentType.startsWith("text/html")) {
     res.setHeader("Content-Security-Policy", CONTENT_SECURITY_POLICY);
   }
+
+  Object.entries(extraHeaders).forEach(([name, value]) => {
+    if (name.toLowerCase() === "vary") {
+      appendVaryHeader(res, value);
+      return;
+    }
+
+    res.setHeader(name, value);
+  });
+};
+
+const send = (
+  res,
+  method,
+  statusCode,
+  body,
+  contentType,
+  cacheControl,
+  extraHeaders = {}
+) => {
+  const payload = Buffer.isBuffer(body) ? body : Buffer.from(body);
+
+  res.statusCode = statusCode;
+  res.setHeader("Content-Length", String(payload.length));
+  applyResponseHeaders(res, contentType, cacheControl, extraHeaders);
 
   if (method === "HEAD") {
     res.end();
@@ -639,6 +787,17 @@ const send = (res, method, statusCode, body, contentType, cacheControl) => {
   res.end(payload);
 };
 
+const sendRedirect = (res, method, statusCode, location) =>
+  send(
+    res,
+    method,
+    statusCode,
+    "",
+    "text/plain; charset=utf-8",
+    "no-store",
+    { Location: location }
+  );
+
 const serveFile = (method, pathname, res) => {
   const rawTarget =
     pathname === "/favicon.svg"
@@ -647,7 +806,7 @@ const serveFile = (method, pathname, res) => {
 
   const safeTarget = path.normalize(rawTarget);
 
-  if (!safeTarget.startsWith(PUBLIC_DIR)) {
+  if (!isPathInside(PUBLIC_DIR, safeTarget)) {
     return false;
   }
 
@@ -677,6 +836,7 @@ const sendJson = (res, method, payload) =>
   );
 
 const createRequestHandler = () => (req, res) => {
+  try {
     const method = req.method || "GET";
 
     if (method !== "GET" && method !== "HEAD") {
@@ -685,6 +845,19 @@ const createRequestHandler = () => (req, res) => {
         method,
         405,
         JSON.stringify({ error: "Method not allowed" }),
+        "application/json; charset=utf-8",
+        "no-store",
+        { Allow: "GET, HEAD" }
+      );
+      return;
+    }
+
+    if (String(req.url || "").length > MAX_URL_LENGTH) {
+      send(
+        res,
+        method,
+        414,
+        JSON.stringify({ error: "Request URL too long" }),
         "application/json; charset=utf-8",
         "no-store"
       );
@@ -695,9 +868,7 @@ const createRequestHandler = () => (req, res) => {
     const normalizedPathname = normalizePathname(requestUrl.pathname);
 
     if (requestUrl.pathname !== normalizedPathname) {
-      res.statusCode = 308;
-      res.setHeader("Location", `${normalizedPathname}${requestUrl.search}`);
-      res.end();
+      sendRedirect(res, method, 308, `${normalizedPathname}${requestUrl.search}`);
       return;
     }
 
@@ -724,9 +895,7 @@ const createRequestHandler = () => (req, res) => {
 
     if (pathname === "/api/health") {
       sendJson(res, method, {
-        status: "ok",
-        service: "dotke-documents",
-        time: new Date().toISOString()
+        status: "ok"
       });
       return;
     }
@@ -738,6 +907,10 @@ const createRequestHandler = () => (req, res) => {
         requestUrl.searchParams.get("q"),
         requestUrl.searchParams.get("topic")
       );
+      const visiblePlaceholders = filterFaqPlaceholders(
+        document.placeholders,
+        filtered.topic
+      );
 
       sendJson(res, method, {
         meta: {
@@ -745,9 +918,12 @@ const createRequestHandler = () => (req, res) => {
           filtered: filtered.items.length,
           query: filtered.displayQuery,
           topic: filtered.topic,
-          topics: document.topics
+          topics: document.topics,
+          defaultTopic: getDefaultFaqTopicSlug(document),
+          filteredPlaceholders: visiblePlaceholders.length
         },
-        items: filtered.items
+        items: filtered.items,
+        placeholders: visiblePlaceholders
       });
       return;
     }
@@ -763,9 +939,7 @@ const createRequestHandler = () => (req, res) => {
     }
 
     if (pathname === "/") {
-      res.statusCode = 308;
-      res.setHeader("Location", withBasePath(basePath, "/faq"));
-      res.end();
+      sendRedirect(res, method, 308, withBasePath(basePath, "/faq"));
       return;
     }
 
@@ -818,7 +992,23 @@ const createRequestHandler = () => (req, res) => {
       "text/html; charset=utf-8",
       "no-store"
     );
-  };
+  } catch (error) {
+    process.stderr.write(`dotke-documents request failure: ${error?.message || "unknown error"}\n`);
+
+    if (res.writableEnded) {
+      return;
+    }
+
+    send(
+      res,
+      req.method || "GET",
+      500,
+      JSON.stringify({ error: "Internal server error" }),
+      "application/json; charset=utf-8",
+      "no-store"
+    );
+  }
+};
 
 const createServer = () => http.createServer(createRequestHandler());
 
